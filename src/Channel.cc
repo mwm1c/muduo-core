@@ -21,14 +21,12 @@ void Channel::tie(const std::shared_ptr<void> &obj)
 
 void Channel::update()
 {
-    // TODO
-    // loop_->updateChannel(this);
+    loop_->updateChannel(this);
 }
 
 void Channel::remove()
 {
-    // TODO
-    // loop_->removeChannel(this);
+    loop_->removeChannel(this);
 }
 
 void Channel::handleEvent(Timestamp receiveTime)

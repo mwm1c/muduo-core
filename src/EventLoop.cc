@@ -11,6 +11,8 @@
 
 __thread EventLoop *t_loopInThisThread = nullptr;
 
+const int kPollTimeMs = 10000;
+
 int createEventFd()
 {
     int evtfd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
@@ -49,6 +51,67 @@ EventLoop::~EventLoop()
     t_loopInThisThread = nullptr;
 }
 
+void EventLoop::loop()
+{
+    looping_ = true;
+    quit_ = false;
+
+    LOG_INFO("EventLoop %p start looping\n", this);
+
+    while (!quit_)
+    {
+        activeChannels_.clear();
+        pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_);
+        for (Channel *channel : activeChannels_)
+        {
+            /**
+             * Poller listen for events on channels and then reports
+             * to EventLoop, notifying the channel to handle the corrensponding event.
+             */
+            channel->handleEvent(pollReturnTime_);
+        }
+        doPendingFunctors();
+    }
+    LOG_INFO("EventLoop %p stop looping\n", this);
+    looping_ = false;
+}
+
+void EventLoop::quit()
+{
+    quit_ = true;
+    if (!isInLoopThread())
+    {
+        wakeup();
+    }
+}
+
+// run cb in current EventLoop
+void EventLoop::runInLoop(Functor cb)
+{
+    if (isInLoopThread())
+    {
+        cb();
+    }
+    else
+    {
+        queueInLoop(cb);
+    }
+}
+
+// put cb into queue, wake up loop later to run cb
+void EventLoop::queueInLoop(Functor cb)
+{
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        pendingFunctors_.emplace_back(cb);
+    }
+    if (! isInLoopThread() || callingPendingFunctors_)
+    {
+        wakeup();
+    }
+
+}
+
 void EventLoop::handleRead()
 {
     uint64_t one = 1;
@@ -57,4 +120,45 @@ void EventLoop::handleRead()
     {
         LOG_ERROR("EventLoop::handleRead() reads %lu bytes instead of 8\n", n);
     }
+}
+
+void EventLoop::wakeup()
+{
+    uint64_t one = 1;
+    ssize_t n = write(wakeupFd_, &one, sizeof one);
+    if (n != sizeof one)
+    {
+        LOG_ERROR("EventLoop::wakeup() writes %lu bytes instead of 8\n", n);
+    }
+}
+
+void EventLoop::updateChannel(Channel *channel)
+{
+    poller_->updateChannel(channel);
+}
+
+void EventLoop::removeChannel(Channel *channel)
+{
+    poller_->removeChannel(channel);
+}
+
+bool EventLoop::hasChannel(Channel *channel)
+{
+    return poller_->hasChannel(channel);
+}
+
+void EventLoop::doPendingFunctors()
+{
+    std::vector<Functor> functors;
+    callingPendingFunctors_ = true;
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        functors.swap(pendingFunctors_);
+    }
+    for (const Functor &functor : functors)
+    {
+        functor();
+    }
+
+    callingPendingFunctors_ = false;
 }
