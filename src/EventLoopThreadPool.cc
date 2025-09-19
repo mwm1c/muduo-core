@@ -15,7 +15,7 @@ EventLoopThreadPool::~EventLoopThreadPool()
     // refer EventLoopThread::threadFunc
 }
 
-void EventLoopThreadPool::start(const ThreadInitCallback &cb = ThreadInitCallback())
+void EventLoopThreadPool::start(const ThreadInitCallback &cb)
 {
     started_ = true;
     for (int i = 0; i < numThreads_; ++i)

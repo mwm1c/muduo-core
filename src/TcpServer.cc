@@ -46,7 +46,7 @@ void TcpServer::start()
     if (started_ ++ == 0)
     {
         threadPool_->start(threadInitCallback_);
-        loop_->runInLoop(std::bind(Acceptor::listen, acceptor_.get()));
+        loop_->runInLoop(std::bind(&Acceptor::listen, acceptor_.get()));
     }
 }
 

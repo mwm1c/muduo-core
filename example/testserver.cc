@@ -9,8 +9,7 @@ public:
     EchoServer(EventLoop *loop,
                const InetAddress &addr,
                const std::string &name)
-        : server_(loop, addr, name)
-        : loop_(loop)
+        : server_(loop, addr, name), loop_(loop)
     {
         // set connection callback
         server_.setConnectionCallback(
