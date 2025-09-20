@@ -11,7 +11,9 @@ const int kAdded = 1;
 const int kDeleted = 2;
 
 EPollPoller::EPollPoller(EventLoop *loop)
-    : Poller(loop), epollfd_(::epoll_create1(EPOLL_CLOEXEC)), events_(kInitEventListSize)
+    : Poller(loop),
+      epollfd_(::epoll_create1(EPOLL_CLOEXEC)),
+      events_(kInitEventListSize)
 {
     if (epollfd_ < 0)
     {

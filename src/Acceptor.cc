@@ -18,8 +18,10 @@ static int createNonblocking()
 }
 
 Acceptor::Acceptor(EventLoop *loop, const InetAddress &listenAddr, bool reuseport)
-    : loop_(loop), acceptSocket_(createNonblocking()),
-      acceptChannel_(loop, acceptSocket_.fd()), listenning_(false)
+    : loop_(loop),
+      acceptSocket_(createNonblocking()),
+      acceptChannel_(loop, acceptSocket_.fd()),
+      listenning_(false)
 {
     acceptSocket_.setReuseAddr(true);
     acceptSocket_.setReusePort(true);
